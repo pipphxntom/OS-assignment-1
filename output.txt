@@ -1,0 +1,61 @@
+SAMPLE OUTPUTS (illustrative)
+
+=== Task 1: Process Creation ===
+[task1] forking 3 children...
+[child-0] PID=12345 PPID=12340 msg='hello from child 0'
+[parent] waited pid=12345 status=0
+[child-1] PID=12346 PPID=12340 msg='hello from child 1'
+[parent] waited pid=12346 status=0
+[child-2] PID=12347 PPID=12340 msg='hello from child 2'
+[parent] waited pid=12347 status=0
+
+=== Task 2: Exec Commands ===
+[child-0] exec -> ls -l (PID=13001)
+total 4
+-rwxr-xr-x 1 user user   0 Sep 16 10:00 foo
+[child-1] exec -> date (PID=13002)
+Tue Sep 16 10:00:01 IST 2025
+[child-2] exec -> ps -o pid,ppid,stat,ni,comm (PID=13003)
+  PID  PPID STAT  NI COMMAND
+13003 12990 R+     0 ps
+...
+
+=== Task 3: Zombie ===
+[parent] spawned child PID=14010 and will sleep without wait()
+[child] exiting immediately to become zombie; PID=14010 PPID=14005
+[parent] ps snapshot (looking for Z/defunct):
+  PID  PPID STAT COMMAND
+14010 14005 Z    <defunct>
+[parent] finally waited zombie pid=14010 status=0
+
+=== Task 3: Orphan ===
+[parent] exiting immediately to orphanize child PID=14100
+[child] start PID=14100 original PPID=14105
+[child] after parent exit, new PPID=1 (likely 1)
+
+=== Task 4: /proc Inspection (pid=1) ===
+[task4] /proc/[pid]/status:
+  Name: systemd
+  State: S (sleeping)
+  VmRSS: 15.2M
+  VmSize: 167.3M
+  Threads: 1
+[task4] /proc/1/exe -> /usr/lib/systemd/systemd
+[task4] /proc/1/fd count = 32
+   fd 0 -> /dev/null
+   fd 1 -> /dev/null
+   fd 2 -> /dev/null
+   ...
+
+=== Task 5: nice() Impact ===
+[child-0] PID=15020 PPID=15015 nice=0 start=1694848800.01
+[child-1] PID=15021 PPID=15015 nice=5 start=1694848800.01
+[child-2] PID=15022 PPID=15015 nice=10 start=1694848800.01
+[child-0] PID=15020 finished at 1694848805.11 elapsed=5.10s
+[child-1] PID=15021 finished at 1694848805.43 elapsed=5.42s
+[child-2] PID=15022 finished at 1694848805.89 elapsed=5.88s
+
+Notes:
+- PIDs and elapsed times differ per run.
+- For zombies: verify with `ps -el | grep defunct` during the parent's sleep window.
+- For orphans: child PPID should change to 1 after parent exits.
